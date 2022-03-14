@@ -12,9 +12,9 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module PayToWalletTest where
+module EscrowTest where
 
-import           PayToWallet
+import           AppliedEscrow
 import           Control.Monad              hiding (fmap)
 import           Control.Monad.Freer.Extras as Extras
 import           Data.Default               (Default (..))
@@ -85,8 +85,8 @@ buildPublishParam =
     , ll     = amount
     }
     where
-      pkh1      = (pubKeyHash . walletPubKey) $ alice
-      pkh2      = (pubKeyHash . walletPubKey) $ bob
+      pkh1      = (paymentPubKeyHash . mockWalletPaymentPubKey) $ alice
+      pkh2      = (paymentPubKeyHash . mockWalletPaymentPubKey) $ bob
       amount    = testContractAmount
       startT    = testContractStartTime
       endT      = testContractEndTime
@@ -103,8 +103,8 @@ buildUseParam tt =
     , uttn    = tt
     }
     where
-      pkh1      = (pubKeyHash . walletPubKey) $ alice
-      pkh2      = (pubKeyHash . walletPubKey) $ bob
+      pkh1      = (paymentPubKeyHash . mockWalletPaymentPubKey) $ alice
+      pkh2      = (paymentPubKeyHash . mockWalletPaymentPubKey) $ bob
       amount    = testContractAmount
       startT    = testContractStartTime
       endT      = testContractEndTime
