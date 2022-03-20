@@ -41,8 +41,8 @@ common lang
 library
     import: lang
     exposed-modules:
-      MyModule
-      Plutus.Contracts.Game
+      AppliedEscrow,
+      EscrowTest
     build-depends:
       base >= 4.9 && < 5,
       aeson,
@@ -54,6 +54,10 @@ library
       plutus-tx-plugin,
       plutus-tx,
       plutus-ledger,
+      plutus-ledger-constraints,
+      text,
+      data-default,
+      tasty,
     hs-source-dirs: src examples/src
 
 test-suite plutus-example-projects-test
@@ -93,4 +97,4 @@ executable plutus-starter-pab
     freer-extras -any,
     plutus-ledger -any,
     openapi3 -any,
-
+    text -any,

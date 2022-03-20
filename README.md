@@ -199,4 +199,9 @@ Issues can be filed in the [GitHub Issue tracker](https://github.com/input-outpu
 For more interactive discussion, you can join the [IOG Technical Community
 Discord](https://discord.gg/sSF5gmDBYg).
 
+### Tips
+#### To use entr to watch your source file during development
+```ls src/*.hs | entr -r cabal build plutus-starter-pab --dependencies-only --disable-documentation```
+
+
 Thanks!
