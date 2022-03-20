@@ -53,9 +53,38 @@ startOracle = do
                 constraints = Constraints.mustMintValue val          <>
                               Constraints.mustSpendPubKeyOutput oref <>
                               Constraints.mustPayToOtherScript (oracleValHash orcl) (Datum $ toBuiltinData Unused) val
-            ledgerTx <- submitTxConstraintsWith @Scripts.Any lookups constraints
-            void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+            {-ledgerTx <- submitTxConstraintsWith @Scripts.Any lookups constraints
+            void $ awaitTxConfirmed $ getCardanoTxId ledgerTx-}
+            void $ adjustAndSubmitWith @Scripts.Any lookups constraints
             Contract.logInfo @String $ printf "minted %s" (show val)
+
+
+adjustAndSubmit :: ( PlutusTx.FromData (Scripts.DatumType a)
+                   , PlutusTx.ToData (Scripts.RedeemerType a)
+                   , PlutusTx.ToData (Scripts.DatumType a)
+                   , AsContractError e
+                   )
+                => Scripts.TypedValidator a
+                -> TxConstraints (Scripts.RedeemerType a) (Scripts.DatumType a)
+                -> Contract w s e CardanoTx
+adjustAndSubmit inst = adjustAndSubmitWith $ Constraints.typedValidatorLookups inst
+
+adjustAndSubmitWith :: ( PlutusTx.FromData (Scripts.DatumType a)
+                       , PlutusTx.ToData (Scripts.RedeemerType a)
+                       , PlutusTx.ToData (Scripts.DatumType a)
+                       , AsContractError e
+                       )
+                    => ScriptLookups a
+                    -> TxConstraints (Scripts.RedeemerType a) (Scripts.DatumType a)
+                    -> Contract w s e CardanoTx
+adjustAndSubmitWith lookups constraints = do
+    unbalanced <- adjustUnbalancedTx <$> mkTxConstraints lookups constraints
+    Contract.logDebug @String $ printf "unbalanced: %s" $ show unbalanced
+    unsigned <- balanceTx unbalanced
+    Contract.logDebug @String $ printf "balanced: %s" $ show unsigned
+    signed <- submitBalancedTx unsigned
+    Contract.logDebug @String $ printf "signed: %s" $ show signed
+    return signed
 
 type OracleSchema = Endpoint "start" ()
 
@@ -64,3 +93,5 @@ startEndpoint = forever
               $ handleError logError
               $ awaitPromise
               $ endpoint @"start" $ \ _ -> do startOracle
+
+
