@@ -50,9 +50,9 @@ startOracle = do
                 lookups     = Constraints.mintingPolicy (markerPolicy (TokenName { unTokenName = "ADROrcl" })) <>
                               Constraints.unspentOutputs (Map.singleton oref o) <>
                               Constraints.otherScript (oracleValScript orcl)
-                constraints = Constraints.mustMintValue val          <>
-                              Constraints.mustSpendPubKeyOutput oref <>
-                              Constraints.mustPayToOtherScript (oracleValHash orcl) (Datum $ toBuiltinData Unused) val
+                constraints = Constraints.mustMintValue val
+                              <> Constraints.mustSpendPubKeyOutput oref
+                              <> Constraints.mustPayToOtherScript (oracleValHash orcl) (Datum $ toBuiltinData Unused) val
             {-ledgerTx <- submitTxConstraintsWith @Scripts.Any lookups constraints
             void $ awaitTxConfirmed $ getCardanoTxId ledgerTx-}
             void $ adjustAndSubmitWith @Scripts.Any lookups constraints
