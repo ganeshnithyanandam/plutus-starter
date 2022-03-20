@@ -42,7 +42,7 @@ library
     import: lang
     exposed-modules:
       MyModule,
-      Oracle.OnChain
+      Oracle.Oracle
     build-depends:
       base >= 4.9 && < 5,
       aeson,

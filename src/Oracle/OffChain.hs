@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE AllowAmbiguousTypes        #-}
 
 module Oracle.OffChain
     ( TokenParams (..)
@@ -38,12 +39,12 @@ import           Oracle.OnChain
 import           Utils                (getCredentials)
 
 adjustAndSubmitWith :: ( PlutusTx.FromData (Scripts.DatumType a)
-                       , PlutusTx.ToData (Scripts.RedeemerType a)
+                       , PlutusTx.ToData (Scripts.RedeemerType b)
                        , PlutusTx.ToData (Scripts.DatumType a)
                        , AsContractError e
                        )
                     => ScriptLookups a
-                    -> TxConstraints (Scripts.RedeemerType a) (Scripts.DatumType a)
+                    -> TxConstraints (Scripts.RedeemerType b) (Scripts.DatumType a)
                     -> Contract w s e CardanoTx
 adjustAndSubmitWith lookups constraints = do
     unbalanced <- adjustUnbalancedTx <$> mkTxConstraints lookups constraints
@@ -55,12 +56,12 @@ adjustAndSubmitWith lookups constraints = do
     return signed
 
 adjustAndSubmit :: ( PlutusTx.FromData (Scripts.DatumType a)
-                   , PlutusTx.ToData (Scripts.RedeemerType a)
-                   , PlutusTx.ToData (Scripts.DatumType a)
+                   , PlutusTx.ToData (Scripts.RedeemerType b)
+                   , PlutusTx.ToData (Scripts.DatumType c)
                    , AsContractError e
                    )
                 => Scripts.TypedValidator a
-                -> TxConstraints (Scripts.RedeemerType a) (Scripts.DatumType a)
+                -> TxConstraints (Scripts.RedeemerType b) (Scripts.DatumType c)
                 -> Contract w s e CardanoTx
 adjustAndSubmit inst = adjustAndSubmitWith $ Constraints.typedValidatorLookups inst
 
@@ -70,11 +71,13 @@ mintOracleNFT = do
             o    <- fromJust <$> Contract.unspentTxOutFromRef oref
             Contract.logDebug @String $ printf "picked UTxO at %s with value %s" (show oref) (show $ _ciTxOutValue o)
 
-            let val         = Value.singleton markerCurSymbol "ADROrcl" 1
+            let orcl        = Oracle {oSymbol = markerCurSymbol, tn = (TokenName { unTokenName = "ADROrcl" })}
+                val         = Value.singleton markerCurSymbol "ADROrcl" 1
                 lookups     = Constraints.mintingPolicy (markerPolicy (TokenName { unTokenName = "ADROrcl" })) <>
                               Constraints.unspentOutputs (Map.singleton oref o)
                 constraints = Constraints.mustMintValue val          <>
                               Constraints.mustSpendPubKeyOutput oref <>
-                              Constraints.mustPayToTheScript Unused val
-            void $ adjustAndSubmitWith @OracleDatum lookups constraints
+                              Constraints.mustPayToOtherScript (oracleValHash Oracle) Unused val
+            ledgerTx <- submitTxConstraintsWith lookups constraints
+            void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
             Contract.logInfo @String $ printf "minted %s" (show val)

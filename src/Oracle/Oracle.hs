@@ -13,11 +13,14 @@
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
 
-module Oracle.OnChain where
+module Oracle.Oracle where
 
 import           Data.String (fromString)
+import           Data.Maybe                  (fromJust)
+
 import qualified PlutusTx
 import           PlutusTx.Builtins.Class (stringToBuiltinByteString)
+import           PlutusTx.IsData.Class
 import           PlutusTx.Prelude            hiding (Semigroup(..), unless)
 import           Ledger                      hiding (mint, singleton)
 import qualified Ledger.Typed.Scripts        as Scripts
@@ -29,13 +32,16 @@ import           Data.Monoid               (Last (..))
 import           Data.Text                 (Text, pack)
 import           GHC.Generics              (Generic)
 import           Plutus.Contract           as Contract hiding (when)
+import           Plutus.Contract.Wallet      (getUnspentOutput)
 import qualified PlutusTx
 import           Ledger                    hiding (singleton)
 import           Ledger.Constraints        as Constraints
 import           Ledger.Value              as Value
 import           Ledger.Ada                as Ada
-import           Prelude                   (Semigroup (..), Show)
+import           Prelude                   (Semigroup (..), Show(..), String)
 import qualified Prelude                   as Prelude
+import           Text.Printf                 (printf)
+
 
 
 {-# INLINABLE mkMarkerPolicy #-}
@@ -73,6 +79,7 @@ PlutusTx.makeLift ''Oracle
 
 data OracleDatum = Used | Unused
   deriving (Show, Eq)
+
 data OracleRedeemer = Use | Update
   deriving (Show, Eq, Generic)
 
@@ -132,3 +139,23 @@ oracleAddress = scriptAddress . oracleValScript
 {-# INLINABLE oracleAsset #-}
 oracleAsset :: Oracle -> AssetClass
 oracleAsset oracle = AssetClass (oSymbol oracle, tn oracle)
+
+
+mintOracleNFT :: Contract w s Text ()
+mintOracleNFT = do
+            oref <- getUnspentOutput
+            o    <- fromJust <$> Contract.unspentTxOutFromRef oref
+            Contract.logDebug @String $ printf "picked UTxO at %s with value %s" (show oref) (show $ _ciTxOutValue o)
+
+            let tn' = (TokenName { unTokenName = "ADROrcl" })
+                orcl        = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
+                val         = Value.singleton (markerCurSymbol "ADROrcl") "ADROrcl" 1
+                lookups     = Constraints.mintingPolicy (markerPolicy (TokenName { unTokenName = "ADROrcl" })) <>
+                              Constraints.unspentOutputs (Map.singleton oref o) <>
+                              Constraints.otherScript (oracleValScript orcl)
+                constraints = Constraints.mustMintValue val          <>
+                              Constraints.mustSpendPubKeyOutput oref <>
+                              Constraints.mustPayToOtherScript (oracleValHash orcl) (Datum $ toBuiltinData Unused) val
+            ledgerTx <- submitTxConstraintsWith @Scripts.Any lookups constraints
+            void $ awaitTxConfirmed $ getCardanoTxId ledgerTx
+            Contract.logInfo @String $ printf "minted %s" (show val)
