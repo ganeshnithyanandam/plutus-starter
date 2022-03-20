@@ -7,7 +7,7 @@
 {-# LANGUAGE StrictData         #-}
 {-# LANGUAGE TypeApplications   #-}
 
-module PayFromScriptToAddress (
+module RSC.OffChain (
     PayFromScriptToAddress
     , PayToWalletParams(..)
     , PayToWalletSchema
@@ -34,8 +34,8 @@ data PayToWalletParams =
 
 type PayToWalletSchema = Endpoint "PayFromScriptToAddress" PayToWalletParams
 
-PayFromScriptToAddress :: Promise () PayToWalletSchema ContractError ()
-PayFromScriptToAddress = endpoint @"PayFromScriptToAddress" -> do
+payFromScriptToAddress :: Promise () PayToWalletSchema ContractError ()
+payFromScriptToAddress = endpoint @"PayFromScriptToAddress" $ do
     logInfo @String "Calling PayFromScriptToAddress endpoint"
     utx <- mkTxConstraints @Void mempty (mustPayToPubKey pkh amount)
     logInfo @String $ "Yielding the unbalanced transaction " <> show utx

@@ -201,7 +201,7 @@ Discord](https://discord.gg/sSF5gmDBYg).
 
 ### Tips
 #### To use entr to watch your source file during development
-```ls src/*.hs | entr -r cabal build plutus-starter-pab --dependencies-only --disable-documentation```
+```ls src/Oracle/*.hs | entr -r cabal build plutus-starter-pab --dependencies-only --disable-documentation```
 
 
 Thanks!

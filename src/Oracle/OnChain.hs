@@ -2,6 +2,8 @@
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
 {-# LANGUAGE NumericUnderscores  #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -11,60 +13,80 @@
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
 
-module RSC.OnChain
-    ( OracleDatum(..)
-    , markerPolicy
-    , tokenCurSymbol
-    , markerTN
-    ) where
+module Oracle.OnChain where
 
+import           Data.String (fromString)
 import qualified PlutusTx
+import           PlutusTx.Builtins.Class (stringToBuiltinByteString)
 import           PlutusTx.Prelude            hiding (Semigroup(..), unless)
 import           Ledger                      hiding (mint, singleton)
 import qualified Ledger.Typed.Scripts        as Scripts
 import           Ledger.Value                as Value
+import           Control.Monad             hiding (fmap)
+import           Data.Aeson                (FromJSON, ToJSON)
+import qualified Data.Map                  as Map
+import           Data.Monoid               (Last (..))
+import           Data.Text                 (Text, pack)
+import           GHC.Generics              (Generic)
+import           Plutus.Contract           as Contract hiding (when)
+import qualified PlutusTx
+import           Ledger                    hiding (singleton)
+import           Ledger.Constraints        as Constraints
+import           Ledger.Value              as Value
+import           Ledger.Ada                as Ada
+import           Prelude                   (Semigroup (..), Show)
+import qualified Prelude                   as Prelude
 
-data OracleDatum = OracleDatum
-    { isUsed :: Bool
-    } deriving Show
-    
-{-# INLINABLE markerTN #-}
-markerTN:: TokenName
-markerTN = fromString "ADROracleNFT"
 
-{-# INLINABLE markerValidator #-}
-markerValidator :: () -> ScriptContext -> Bool
-markerValidator () ctx = traceIfFalse "UTxO not consumed"   hasUTxO           &&
-                          traceIfFalse "wrong amount minted" checkMintedAmount
+{-# INLINABLE mkMarkerPolicy #-}
+mkMarkerPolicy :: TokenName -> () -> ScriptContext -> Bool
+mkMarkerPolicy tn () ctx = traceIfFalse "wrong amount minted" checkMintedAmount
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
-    hasUTxO :: Bool
-    hasUTxO = any (\i -> txInInfoOutRef i == oref) $ txInfoInputs info
-
     checkMintedAmount :: Bool
     checkMintedAmount = case flattenValue (txInfoMint info) of
-        [(_, markerTN, amt)] -> tn' == tn && amt == 1
+        [(_, tn', amt')] -> tn' == tn && amt' == 1
         _               -> False
 
-markerPolicy :: Scripts.MintingPolicy
-markerPolicy = mkMintingPolicyScript $
-    $$(PlutusTx.compile [|| Scripts.wrapMintingPolicy markerValidator ||])
+markerPolicy :: TokenName -> Scripts.MintingPolicy
+markerPolicy tn = mkMintingPolicyScript $
+    $$(PlutusTx.compile [|| \tn'->  Scripts.wrapMintingPolicy $ mkMarkerPolicy tn' ||])
+    `PlutusTx.applyCode`
+     PlutusTx.liftCode tn
 
-markerCurSymbol :: CurrencySymbol
-markerCurSymbol = scriptCurrencySymbol $ markerPolicy
+{-# INLINABLE markerCurSymbol #-}
+markerCurSymbol :: TokenName -> CurrencySymbol
+markerCurSymbol = scriptCurrencySymbol . markerPolicy
+
+{-# INLINABLE markerAsset #-}
+markerAsset :: TokenName -> AssetClass
+markerAsset tn = AssetClass (markerCurSymbol tn, tn)
+
+data Oracle = Oracle
+      { oSymbol :: !CurrencySymbol
+      , tn :: !TokenName
+      } deriving (Show, Generic, FromJSON, ToJSON, Prelude.Eq, Prelude.Ord)
+
+PlutusTx.makeLift ''Oracle
+
+data OracleDatum = Used | Unused
+  deriving (Show, Eq)
+data OracleRedeemer = Use | Update
+  deriving (Show, Eq, Generic)
+
+PlutusTx.makeIsDataIndexed ''OracleDatum [('Used,0), ('Unused,1)]
+PlutusTx.makeIsDataIndexed ''OracleRedeemer [('Use,0), ('Update,1)]
 
 {-# INLINABLE mkOracleValidator #-}
-mkOracleValidator :: String -> OracleRedeemer -> ScriptContext -> Bool
-mkOracleValidator b r ctx =
+mkOracleValidator :: Oracle -> OracleDatum -> OracleRedeemer -> ScriptContext -> Bool
+mkOracleValidator orcl dat r ctx =
     traceIfFalse "token missing from input"  inputHasToken  &&
     traceIfFalse "token missing from output" outputHasToken &&
     case r of
-        Update -> traceIfFalse "operator signature missing" (txSignedBy info $ oOperator oracle) &&
-                  traceIfFalse "invalid output datum"       validOutputDatum
-        Use    -> traceIfFalse "oracle value changed"       (outputDatum == Just x)              &&
-                  traceIfFalse "fees not paid"              feesPaid
+        Update -> traceIfFalse "invalid output datum"  (outputDatum == Just Unused)
+        Use    -> traceIfFalse "Datum not reset" (outputDatum == Just Used)
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -75,7 +97,7 @@ mkOracleValidator b r ctx =
         Just i  -> txInInfoResolved i
 
     inputHasToken :: Bool
-    inputHasToken = assetClassValueOf (txOutValue ownInput) (oracleAsset oracle) == 1
+    inputHasToken = assetClassValueOf (txOutValue ownInput) (oracleAsset orcl) == 1
 
     ownOutput :: TxOut
     ownOutput = case getContinuingOutputs ctx of
@@ -83,36 +105,42 @@ mkOracleValidator b r ctx =
         _   -> traceError "expected exactly one oracle output"
 
     outputHasToken :: Bool
-    outputHasToken = assetClassValueOf (txOutValue ownOutput) (oracleAsset oracle) == 1
+    outputHasToken = assetClassValueOf (txOutValue ownOutput) (oracleAsset orcl) == 1
 
-    outputDatum :: Maybe Integer
-    outputDatum = oracleValue ownOutput (`findDatum` info)
+    outputDatum :: Maybe OracleDatum
+    outputDatum = oracleValue ownOutput info
 
     validOutputDatum :: Bool
     validOutputDatum = isJust outputDatum
 
-    feesPaid :: Bool
-    feesPaid =
-      let
-        inVal  = txOutValue ownInput
-        outVal = txOutValue ownOutput
-      in
-        outVal `geq` (inVal <> Ada.lovelaceValueOf (oFee oracle))
+{-# INLINABLE oracleValue #-}
+oracleValue :: TxOut -> TxInfo -> Maybe OracleDatum
+oracleValue o i = do
+    dh      <- txOutDatum o
+    Datum d <- findDatum dh i
+    PlutusTx.fromBuiltinData d
 
 data Oracling
-instance Scripts.ScriptType Oracling where
-    type instance DatumType Oracling = String
+instance Scripts.ValidatorTypes Oracling where
+    type instance DatumType Oracling = OracleDatum
     type instance RedeemerType Oracling = OracleRedeemer
 
-oracleInst :: Oracle -> Scripts.ScriptInstance Oracling
-oracleInst oracle = Scripts.validator @Oracling
-    ($$(PlutusTx.compile [|| mkOracleValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode oracle)
+oracleScriptInst :: Oracle -> Scripts.TypedValidator Oracling
+oracleScriptInst o = Scripts.mkTypedValidator @Oracling
+    ($$(PlutusTx.compile [|| mkOracleValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode o)
     $$(PlutusTx.compile [|| wrap ||])
   where
-    wrap = Scripts.wrapValidator @Integer @OracleRedeemer
+    wrap = Scripts.wrapValidator @OracleDatum @OracleRedeemer
 
-oracleValidator :: Oracle -> Validator
-oracleValidator = Scripts.validatorScript . oracleInst
+oracleValScript :: Oracle -> Validator
+oracleValScript = Scripts.validatorScript . oracleScriptInst
+
+oracleValHash :: Oracle -> Ledger.ValidatorHash
+oracleValHash = Scripts.validatorHash . oracleScriptInst
 
 oracleAddress :: Oracle -> Ledger.Address
-oracleAddress = scriptAddress . oracleValidator
+oracleAddress = scriptAddress . oracleValScript
+
+{-# INLINABLE oracleAsset #-}
+oracleAsset :: Oracle -> AssetClass
+oracleAsset oracle = AssetClass (oSymbol oracle, tn oracle)

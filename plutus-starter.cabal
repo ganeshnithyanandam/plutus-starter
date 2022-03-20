@@ -41,8 +41,9 @@ common lang
 library
     import: lang
     exposed-modules:
-      AppliedEscrow,
-      EscrowTest
+      MyModule,
+      Oracle.OffChain,
+      Oracle.OnChain
     build-depends:
       base >= 4.9 && < 5,
       aeson,
@@ -58,7 +59,10 @@ library
       text,
       data-default,
       tasty,
-    hs-source-dirs: src examples/src
+    hs-source-dirs:
+      src,
+      src/Oracle,
+      src/RSC
 
 test-suite plutus-example-projects-test
   import: lang
