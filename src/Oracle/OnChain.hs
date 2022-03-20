@@ -85,8 +85,8 @@ mkOracleValidator orcl dat r ctx =
     traceIfFalse "token missing from input"  inputHasToken  &&
     traceIfFalse "token missing from output" outputHasToken &&
     case r of
-        Update -> traceIfFalse "invalid output datum"  (outputDatum == Just Unused)
-        Use    -> traceIfFalse "Datum not reset" (outputDatum == Just Used)
+        Update -> True
+        Use    -> True
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -107,18 +107,6 @@ mkOracleValidator orcl dat r ctx =
     outputHasToken :: Bool
     outputHasToken = assetClassValueOf (txOutValue ownOutput) (oracleAsset orcl) == 1
 
-    outputDatum :: Maybe OracleDatum
-    outputDatum = oracleValue ownOutput info
-
-    validOutputDatum :: Bool
-    validOutputDatum = isJust outputDatum
-
-{-# INLINABLE oracleValue #-}
-oracleValue :: TxOut -> TxInfo -> Maybe OracleDatum
-oracleValue o i = do
-    dh      <- txOutDatum o
-    Datum d <- findDatum dh i
-    PlutusTx.fromBuiltinData d
 
 data Oracling
 instance Scripts.ValidatorTypes Oracling where

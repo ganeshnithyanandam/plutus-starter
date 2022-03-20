@@ -42,7 +42,6 @@ library
     import: lang
     exposed-modules:
       MyModule,
-      Oracle.OffChain,
       Oracle.OnChain
     build-depends:
       base >= 4.9 && < 5,
@@ -59,6 +58,13 @@ library
       text,
       data-default,
       tasty,
+      plutus-ledger-api,
+      plutus-pab,
+      serialise,
+      cardano-ledger-core,
+      cardano-crypto-class,
+      cardano-api,
+      openapi3,
     hs-source-dirs:
       src,
       src/Oracle,

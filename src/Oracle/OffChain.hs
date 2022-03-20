@@ -67,14 +67,14 @@ adjustAndSubmit inst = adjustAndSubmitWith $ Constraints.typedValidatorLookups i
 mintOracleNFT :: Contract w s Text ()
 mintOracleNFT = do
             oref <- getUnspentOutput
-            o    <- fromJust <$> Contract.txOutFromRef oref
+            o    <- fromJust <$> Contract.unspentTxOutFromRef oref
             Contract.logDebug @String $ printf "picked UTxO at %s with value %s" (show oref) (show $ _ciTxOutValue o)
 
-            let val         = Value.singleton oracleCurSymbol markerTN 1
-                lookups     = Constraints.mintingPolicy oraclePolicy <>
+            let val         = Value.singleton markerCurSymbol "ADROrcl" 1
+                lookups     = Constraints.mintingPolicy (markerPolicy (TokenName { unTokenName = "ADROrcl" })) <>
                               Constraints.unspentOutputs (Map.singleton oref o)
                 constraints = Constraints.mustMintValue val          <>
                               Constraints.mustSpendPubKeyOutput oref <>
-                              Constraints.mustPayToTheScript (OracleDatum False) (val)
-            void $ adjustAndSubmitWith @Void lookups constraints
+                              Constraints.mustPayToTheScript Unused val
+            void $ adjustAndSubmitWith @OracleDatum lookups constraints
             Contract.logInfo @String $ printf "minted %s" (show val)
