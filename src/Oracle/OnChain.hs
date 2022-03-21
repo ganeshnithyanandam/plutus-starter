@@ -77,13 +77,19 @@ data Oracle = Oracle
 
 PlutusTx.makeLift ''Oracle
 
-data OracleDatum = Used | Unused
+data OracleStatus = Used | Unused
+  deriving (Show, Eq)
+
+data OracleDatum = OracleDatum  { status ::  OracleStatus
+                                , pkh :: PaymentPubKeyHash
+                                }
   deriving (Show, Eq)
 
 data OracleRedeemer = Use | Update
   deriving (Show, Eq, Generic)
 
-PlutusTx.makeIsDataIndexed ''OracleDatum [('Used,0), ('Unused,1)]
+PlutusTx.makeIsDataIndexed ''OracleStatus [('Used,0), ('Unused,1)]
+PlutusTx.makeIsDataIndexed ''OracleDatum [('OracleDatum,0)]
 PlutusTx.makeIsDataIndexed ''OracleRedeemer [('Use,0), ('Update,1)]
 
 {-# INLINABLE mkOracleValidator #-}

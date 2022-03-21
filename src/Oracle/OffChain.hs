@@ -44,7 +44,7 @@ startOracle = do
             oref <- getUnspentOutput
             o    <- fromJust <$> Contract.unspentTxOutFromRef oref
             Contract.logDebug @String $ printf "picked UTxO at %s with value %s" (show oref) (show $ _ciTxOutValue o)
-
+            pkh <- Contract.ownPaymentPubKeyHash
             let tn' = (TokenName { unTokenName = "ADROrcl" })
                 orcl        = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
                 val         = Value.singleton (markerCurSymbol "ADROrcl") "ADROrcl" 1
@@ -53,12 +53,14 @@ startOracle = do
                               Constraints.otherScript (oracleValScript orcl)
                 constraints = Constraints.mustMintValue val
                               <> Constraints.mustSpendPubKeyOutput oref
-                              <> Constraints.mustPayToOtherScript (oracleValHash orcl) (Datum $ toBuiltinData Unused) val
+                              <> Constraints.mustPayToOtherScript (oracleValHash orcl) (Datum $ toBuiltinData $ oracleDatumWith Unused pkh) val
             {-ledgerTx <- submitTxConstraintsWith @Scripts.Any lookups constraints
             void $ awaitTxConfirmed $ getCardanoTxId ledgerTx-}
             void $ adjustAndSubmitWith @Scripts.Any lookups constraints
             Contract.logInfo @String $ printf "minted %s" (show val)
 
+oracleDatumWith :: OracleStatus -> PaymentPubKeyHash -> OracleDatum
+oracleDatumWith s' pkh' = OracleDatum {status = s', pkh = pkh'}
 
 adjustAndSubmit :: ( PlutusTx.FromData (Scripts.DatumType a)
                    , PlutusTx.ToData (Scripts.RedeemerType a)
