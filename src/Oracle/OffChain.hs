@@ -7,13 +7,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
-{-# LANGUAGE AllowAmbiguousTypes        #-}
+{-# LANGUAGE TypeOperators         #-}
 
 module Oracle.OffChain
     ( startOracle
     , startEndpoint
     ) where
 
+import           Control.Lens (view)
 import           Control.Monad               hiding (fmap)
 import           PlutusTx.IsData.Class
 import           Data.Aeson                  (FromJSON, ToJSON)
@@ -86,12 +87,39 @@ adjustAndSubmitWith lookups constraints = do
     Contract.logDebug @String $ printf "signed: %s" $ show signed
     return signed
 
+inspectOracle :: Contract w s Text ()
+inspectOracle = do
+            let tn' = (TokenName { unTokenName = "ADROrcl" })
+                orcl = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
+            os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)
+            let val = mconcat [view ciTxOutValue o | o <- os]
+                markerOs = [o | o <- os, csMatcher (markerCurSymbol tn') (view ciTxOutValue o)]
+                datums = [datumContent o | o <- markerOs]
+            Contract.logInfo @String $ printf "Outputs at oracle %s" $ show os
+            Contract.logInfo @String $ printf "Total value at oracle %s" $ show val
+            Contract.logInfo @String $ printf "Marker outputs at oracle %s" $ show markerOs
+            Contract.logInfo @String $ printf "Datum at oracle %s" $ show datums
+
+csMatcher :: CurrencySymbol -> Value -> Bool
+csMatcher cs val = cs `elem` symbols val
+
+datumContent :: ChainIndexTxOut -> Maybe OracleDatum
+datumContent o = do
+  Datum d <- either (const Nothing) Just (_ciTxOutDatum o)
+  PlutusTx.fromBuiltinData d
+
 type OracleSchema = Endpoint "start" ()
+                    .\/ Endpoint "inspect" ()
+
 
 startEndpoint :: Contract () OracleSchema Text ()
 startEndpoint = forever
               $ handleError logError
               $ awaitPromise
-              $ endpoint @"start" $ \ _ -> do startOracle
+              $ start' `select` inspect'
+                where
+                  start'   = endpoint @"start" $ \ _ -> do startOracle
+                  inspect'   = endpoint @"inspect" $ \ _ -> do inspectOracle
+
 
 

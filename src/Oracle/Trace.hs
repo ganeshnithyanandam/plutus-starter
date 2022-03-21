@@ -35,3 +35,6 @@ oracleTrace :: EmulatorTrace ()
 oracleTrace = do
     h <- activateContractWallet alice startEndpoint
     callEndpoint @"start" h ()
+
+    void $ Emulator.waitNSlots 2
+    callEndpoint @"inspect" h ()

@@ -67,6 +67,7 @@ library
       cardano-api,
       openapi3,
       tasty-hunit,
+      lens,
     hs-source-dirs:
       src,
       src/Oracle,
