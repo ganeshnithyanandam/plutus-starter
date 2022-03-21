@@ -24,8 +24,8 @@ import           Plutus.Contract.Trace      as X
 
 import           Oracle.OffChain
 
-testToken :: IO ()
-testToken = runEmulatorTraceIO oracleTrace
+testContract :: IO ()
+testContract = runEmulatorTraceIO oracleTrace
 
 alice, bob :: Wallet
 alice = X.knownWallet 1
@@ -34,7 +34,9 @@ bob = X.knownWallet 2
 oracleTrace :: EmulatorTrace ()
 oracleTrace = do
     h <- activateContractWallet alice startEndpoint
-    callEndpoint @"start" h ()
+    {-ownPK <- Contract.ownPaymentPubKeyHash-}
+    let pkh = mockWalletPaymentPubKeyHash bob
+    callEndpoint @"start" h pkh
 
     void $ Emulator.waitNSlots 2
     callEndpoint @"inspect" h ()

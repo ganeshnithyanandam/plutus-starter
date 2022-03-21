@@ -39,12 +39,12 @@ import           Text.Printf                 (printf)
 import           Oracle.OnChain
 import           Utils                (getCredentials)
 
-startOracle :: Contract w s Text ()
-startOracle = do
+startOracle :: PaymentPubKeyHash -> Contract w s Text ()
+startOracle pkh = do
             oref <- getUnspentOutput
             o    <- fromJust <$> Contract.unspentTxOutFromRef oref
             Contract.logDebug @String $ printf "picked UTxO at %s with value %s" (show oref) (show $ _ciTxOutValue o)
-            pkh <- Contract.ownPaymentPubKeyHash
+
             let tn' = (TokenName { unTokenName = "ADROrcl" })
                 orcl        = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
                 val         = Value.singleton (markerCurSymbol "ADROrcl") "ADROrcl" 1
@@ -110,9 +110,8 @@ datumContent o = do
   Datum d <- either (const Nothing) Just (_ciTxOutDatum o)
   PlutusTx.fromBuiltinData d
 
-type OracleSchema = Endpoint "start" ()
+type OracleSchema = Endpoint "start" PaymentPubKeyHash
                     .\/ Endpoint "inspect" ()
-
 
 startEndpoint :: Contract () OracleSchema Text ()
 startEndpoint = forever
@@ -120,7 +119,7 @@ startEndpoint = forever
               $ awaitPromise
               $ start' `select` inspect'
                 where
-                  start'   = endpoint @"start" $ \ _ -> do startOracle
+                  start'   = endpoint @"start" $ \ x -> do startOracle x
                   inspect'   = endpoint @"inspect" $ \ _ -> do inspectOracle
 
 
