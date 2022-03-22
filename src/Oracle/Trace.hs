@@ -27,18 +27,21 @@ import           Oracle.OffChain
 testContract :: IO ()
 testContract = runEmulatorTraceIO oracleTrace
 
-alice, bob :: Wallet
+alice, bob, charlie :: Wallet
 alice = X.knownWallet 1
 bob = X.knownWallet 2
+charlie = X.knownWallet 3
 
 oracleTrace :: EmulatorTrace ()
 oracleTrace = do
-    h1 <- activateContractWallet alice startOrclEndpoint
+    h1 <- activateContractWallet alice useOrclEndpoints
     h2 <- activateContractWallet alice walletEndpoint
     {-h2 <- activateContractWallet alice inspectEndpoint-}
     {-ownPK <- Contract.ownPaymentPubKeyHash-}
-    let pkh = mockWalletPaymentPubKeyHash bob
-    callEndpoint @"start" h1 pkh
+    let pkhBob = mockWalletPaymentPubKeyHash bob
+    callEndpoint @"start" h1 pkhBob
+    let pkhCharlie = mockWalletPaymentPubKeyHash charlie
+    callEndpoint @"update" h1 pkhCharlie
 
     void $ Emulator.waitNSlots 2
     callEndpoint @"payRewards" h2 ()
