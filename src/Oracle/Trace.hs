@@ -33,10 +33,12 @@ bob = X.knownWallet 2
 
 oracleTrace :: EmulatorTrace ()
 oracleTrace = do
-    h <- activateContractWallet alice startEndpoint
+    h1 <- activateContractWallet alice startOrclEndpoint
+    h2 <- activateContractWallet alice walletEndpoint
+    {-h2 <- activateContractWallet alice inspectEndpoint-}
     {-ownPK <- Contract.ownPaymentPubKeyHash-}
     let pkh = mockWalletPaymentPubKeyHash bob
-    callEndpoint @"start" h pkh
+    callEndpoint @"start" h1 pkh
 
     void $ Emulator.waitNSlots 2
-    callEndpoint @"inspect" h ()
+    callEndpoint @"payRewards" h2 ()

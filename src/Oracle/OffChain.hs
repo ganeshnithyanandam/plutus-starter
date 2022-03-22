@@ -9,10 +9,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Oracle.OffChain
-    ( startOracle
-    , startEndpoint
-    ) where
+module Oracle.OffChain where
 
 import           Control.Lens (view)
 import           Control.Monad               hiding (fmap)
@@ -89,18 +86,19 @@ adjustAndSubmitWith lookups constraints = do
     Contract.logDebug @String $ printf "signed: %s" $ show signed
     return signed
 
-inspectOracle :: Contract w s Text ()
+inspectOracle :: Contract w s Text (Maybe OracleDatum)
 inspectOracle = do
             let tn' = (TokenName { unTokenName = "ADROrcl" })
                 orcl = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
             os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)
             let val = mconcat [view ciTxOutValue o | o <- os]
                 markerOs = [o | o <- os, csMatcher (markerCurSymbol tn') (view ciTxOutValue o)]
-                datums = [datumContent o | o <- markerOs]
+                markerDatum = head $ [datumContent o | o <- markerOs]
             Contract.logInfo @String $ printf "Outputs at oracle %s" $ show os
             Contract.logInfo @String $ printf "Total value at oracle %s" $ show val
             Contract.logInfo @String $ printf "Marker outputs at oracle %s" $ show markerOs
-            Contract.logInfo @String $ printf "Datum at oracle %s" $ show datums
+            Contract.logInfo @String $ printf "Datum at oracle %s" $ show markerDatum
+            return markerDatum
 
 csMatcher :: CurrencySymbol -> Value -> Bool
 csMatcher cs val = cs `elem` symbols val
@@ -113,14 +111,43 @@ datumContent o = do
 type OracleSchema = Endpoint "start" PaymentPubKeyHash
                     .\/ Endpoint "inspect" ()
 
-startEndpoint :: Contract () OracleSchema Text ()
-startEndpoint = forever
+startOrclEndpoint :: Contract () OracleSchema Text ()
+startOrclEndpoint = forever
               $ handleError logError
               $ awaitPromise
-              $ start' `select` inspect'
+              $ endpoint @"start" $ \ x -> do startOracle x
+
+inspectEndpoint :: Promise () OracleSchema Text (Maybe OracleDatum)
+inspectEndpoint = endpoint @"inspect" $ \_ -> do inspectOracle
+
+pay :: Contract w s Text ()
+pay = do
+        dat <- inspectOracle
+        Contract.logDebug @String $ printf "Received datum from oracle: %s" (show dat)
+        let tn' = (TokenName { unTokenName = "ADROrcl" })
+            orcl = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
+            pkh' = pkh $ fromJust dat
+        os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)
+        utxos <- utxosAt (oracleAddress orcl)
+        let val = mconcat [view ciTxOutValue o | o <- os, csMatcher (markerCurSymbol tn') (view ciTxOutValue o) == False]
+            markerVal = Value.singleton (markerCurSymbol "ADROrcl") "ADROrcl" 1
+            lookups = Constraints.typedValidatorLookups (oracleScriptInst orcl)
+                      <> Constraints.unspentOutputs utxos
+            constraints = collectFromScript utxos (Update)
+                          <> Constraints.mustPayToPubKey (pkh') val
+                          <> Constraints.mustPayToTheScript (oracleDatumWith Used pkh') markerVal
+        void $ adjustAndSubmitWith @Oracling lookups constraints
+        Contract.logInfo @String $ printf "Paid with data: %s" (show $ dat)
+
+type WalletSchema = Endpoint "payRewards" ()
+
+walletEndpoint :: Contract () WalletSchema Text ()
+walletEndpoint = forever
+              $ handleError logError
+              $ awaitPromise
+              $ payRewards'
                 where
-                  start'   = endpoint @"start" $ \ x -> do startOracle x
-                  inspect'   = endpoint @"inspect" $ \ _ -> do inspectOracle
+                  payRewards'   = endpoint @"payRewards" $ \_ -> do pay
 
 
 

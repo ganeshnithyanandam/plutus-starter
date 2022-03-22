@@ -95,8 +95,8 @@ PlutusTx.makeIsDataIndexed ''OracleRedeemer [('Use,0), ('Update,1)]
 {-# INLINABLE mkOracleValidator #-}
 mkOracleValidator :: Oracle -> OracleDatum -> OracleRedeemer -> ScriptContext -> Bool
 mkOracleValidator orcl dat r ctx =
-    traceIfFalse "token missing from input"  inputHasToken  &&
-    traceIfFalse "token missing from output" outputHasToken &&
+    traceIfFalse "Marker token missing from input"  inputHasToken  &&
+    traceIfFalse "Marker token missing from output" outputHasMarker &&
     case r of
         Update -> True
         Use    -> True
@@ -117,8 +117,8 @@ mkOracleValidator orcl dat r ctx =
         [o] -> o
         _   -> traceError "expected exactly one oracle output"
 
-    outputHasToken :: Bool
-    outputHasToken = assetClassValueOf (txOutValue ownOutput) (oracleAsset orcl) == 1
+    outputHasMarker :: Bool
+    outputHasMarker = assetClassValueOf (txOutValue ownOutput) (oracleAsset orcl) == 1
 
 
 data Oracling
