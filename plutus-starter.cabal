@@ -42,8 +42,9 @@ library
     import: lang
     exposed-modules:
       Oracle.OffChain,
-      Oracle.OnChain
-      Oracle.Trace
+      Oracle.OnChain,
+      Oracle.Trace,
+      Oracle.Deploy
     build-depends:
       base >= 4.9 && < 5,
       aeson,
