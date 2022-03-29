@@ -98,6 +98,7 @@ adjustAndSubmitWith lookups constraints = do
 
 inspectOracle :: Contract w s Text (Maybe OracleDatum)
 inspectOracle = do
+            Contract.logInfo @String $ printf "Inspecting oracle"
             let tn' = (TokenName { unTokenName = "ADROrcl" })
                 orcl = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
             os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)

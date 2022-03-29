@@ -68,7 +68,6 @@ tryReadAddress x = case deserialiseAddress AsAddressAny $ pack x of
 tryReadWalletId :: String -> Maybe WalletId
 tryReadWalletId = decode . encode
 
-
 unsafeReadWalletId :: String -> WalletId
 unsafeReadWalletId s = fromMaybe (error $ "can't parse " ++ s ++ " as a WalletId") $ tryReadWalletId s
 
@@ -94,7 +93,9 @@ writeUnit = writeJSON "testnet/unit.json" ()
 contractActivationArgs :: WalletId -> a -> ContractActivationArgs a
 contractActivationArgs wid a = ContractActivationArgs
     { caID = a
-    , caWallet = Just $ Wallet {getWalletId = wid}
+    , caWallet = Just $ Wallet { getWalletId = wid
+                               , prettyWalletName = Just "PabRscContractWallet"
+                               }
     }
 
 getCredentials :: Plutus.Address -> Maybe (Plutus.PaymentPubKeyHash, Maybe Plutus.StakePubKeyHash)

@@ -44,7 +44,9 @@ library
       Oracle.OffChain,
       Oracle.OnChain,
       Oracle.Trace,
-      Oracle.Deploy
+      Oracle.Deploy,
+      PAB,
+      Utils
     build-depends:
       base >= 4.9 && < 5,
       aeson,
@@ -69,10 +71,28 @@ library
       openapi3,
       tasty-hunit,
       lens,
+      prettyprinter,
     hs-source-dirs:
       src,
       src/Oracle,
       src/RSC
+
+executable oracle-pab
+  main-is: oracle-pab.hs
+  hs-source-dirs:   app
+  ghc-options:      -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:    aeson
+                  , base ^>= 4.14.1.0
+                  , data-default
+                  , freer-extras
+                  , freer-simple
+                  , plutus-contract
+                  , plutus-ledger
+                  , plutus-ledger-constraints
+                  , plutus-pab
+                  , plutus-starter
+                  , plutus-use-cases
+                  , text
 
 test-suite plutus-example-projects-test
   import: lang
@@ -112,3 +132,36 @@ executable plutus-starter-pab
     plutus-ledger -any,
     openapi3 -any,
     text -any,
+
+executable start-oracle
+  main-is: start-oracle.hs
+  hs-source-dirs:      app
+  ghc-options:         -Wall
+  build-depends:       base ^>= 4.14.1.0
+                     , plutus-contract
+                     , plutus-ledger
+                     , plutus-pab
+                     , plutus-starter
+                     , req ^>= 3.9.0
+
+executable update-oracle
+  main-is: update-oracle.hs
+  hs-source-dirs:      app
+  ghc-options:         -Wall
+  build-depends:       base ^>= 4.14.1.0
+                     , plutus-contract
+                     , plutus-ledger
+                     , plutus-pab
+                     , plutus-starter
+                     , req ^>= 3.9.0
+
+executable inspect-oracle
+  main-is: inspect-oracle.hs
+  hs-source-dirs:      app
+  ghc-options:         -Wall
+  build-depends:       base ^>= 4.14.1.0
+                     , plutus-contract
+                     , plutus-ledger
+                     , plutus-pab
+                     , plutus-starter
+                     , req ^>= 3.9.0
