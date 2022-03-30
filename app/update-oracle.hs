@@ -13,7 +13,7 @@ import Text.Printf                (printf)
 import Wallet.Emulator.Wallet     (WalletId (..))
 import Wallet.Types               (ContractInstanceId (..))
 import PAB                        (OracleContracts (..))
-import Utils                      (contractActivationArgs, unsafeReadAddress, unsafeReadWalletId)
+import Utils                      (contractActivationArgs, unsafeReadAddress, unsafeReadWalletId, unsafePaymentPubKeyHash)
 
 main :: IO ()
 main = do

@@ -19,7 +19,7 @@ main :: IO ()
 main = do
     [wid'] <- getArgs
     let wid = unsafeReadWalletId wid'
-    printf "Inpsecting rsc oracle from contract wallet %s" (show wid)
+    printf "Start inpsecting rsc oracle from contract wallet %s\n" (show wid)
     cid <- inspectOracle wid
     printf "Oracle inspection completed, contract instance id: %s\n" $ show cid
 

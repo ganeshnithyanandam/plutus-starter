@@ -39,7 +39,8 @@ import           Utils                (getCredentials)
 startOracle :: PaymentPubKeyHash -> Contract w s Text ()
 startOracle pkh = do
             oref <- getUnspentOutput
-            o    <- fromJust <$> Contract.unspentTxOutFromRef oref
+            Contract.logInfo @String $ printf "picked UTxO %s" (show oref)
+            o    <- fromJust <$> Contract.txOutFromRef oref
             Contract.logDebug @String $ printf "picked UTxO at %s with value %s" (show oref) (show $ _ciTxOutValue o)
 
             let tn' = (TokenName { unTokenName = "ADROrcl" })
@@ -98,18 +99,32 @@ adjustAndSubmitWith lookups constraints = do
 
 inspectOracle :: Contract w s Text (Maybe OracleDatum)
 inspectOracle = do
-            Contract.logInfo @String $ printf "Inspecting oracle"
+            Contract.logInfo @String $ printf "Inspecting oracle\n"
             let tn' = (TokenName { unTokenName = "ADROrcl" })
                 orcl = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
             os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)
             let val = mconcat [view ciTxOutValue o | o <- os]
                 markerOs = [o | o <- os, csMatcher (markerCurSymbol tn') (view ciTxOutValue o)]
-                markerDatum = head $ [datumContent o | o <- markerOs]
-            Contract.logInfo @String $ printf "Outputs at oracle %s" $ show os
-            Contract.logInfo @String $ printf "Total value at oracle %s" $ show val
-            Contract.logInfo @String $ printf "Marker outputs at oracle %s" $ show markerOs
-            Contract.logInfo @String $ printf "Datum at oracle %s" $ show markerDatum
+            Contract.logInfo @String $ printf "Outputs at oracle %s\n" $ show os
+            Contract.logInfo @String $ printf "Marker outputs at oracle %s\n" $ show markerOs
+            let markerDatum = head $ [datumContent o | o <- markerOs]
+            Contract.logInfo @String $ printf "Total value at oracle %s\n" $ show val
+            Contract.logInfo @String $ printf "Datum at oracle %s\n" $ show markerDatum
             return markerDatum
+
+inspectOracleNoReturn :: Contract w s Text ()
+inspectOracleNoReturn = do
+            Contract.logInfo @String $ printf "Inspecting oracle\n"
+            let tn' = (TokenName { unTokenName = "ADROrcl" })
+                orcl = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
+            os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)
+            let val = mconcat [view ciTxOutValue o | o <- os]
+                markerOs = [o | o <- os, csMatcher (markerCurSymbol tn') (view ciTxOutValue o)]
+            Contract.logInfo @String $ printf "Outputs at oracle %s\n" $ show os
+            Contract.logInfo @String $ printf "Marker outputs at oracle %s\n" $ show markerOs
+            let markerDatum = head $ [datumContent o | o <- markerOs]
+            Contract.logInfo @String $ printf "Total value at oracle %s\n" $ show val
+            Contract.logInfo @String $ printf "Datum at oracle %s\n" $ show markerDatum
 
 markerVal :: Value
 markerVal = Value.singleton (markerCurSymbol "ADROrcl") "ADROrcl" 1
@@ -125,6 +140,7 @@ datumContent o = do
 type OracleSchema = Endpoint "start" PaymentPubKeyHash
                     .\/ Endpoint "update" PaymentPubKeyHash
                     .\/ Endpoint "inspect" ()
+                    .\/ Endpoint "inspectNR" ()
 
 useOrclEndpoints :: Contract () OracleSchema Text ()
 useOrclEndpoints = forever
@@ -134,6 +150,14 @@ useOrclEndpoints = forever
               where
                 start'   = endpoint @"start" (\x -> startOracle x)
                 udpate'  = endpoint @"update" (\x -> updateOracle x)
+
+inspectEndpointNR :: Contract () OracleSchema Text ()
+inspectEndpointNR = forever
+              $ handleError logError
+              $ awaitPromise
+              $ inspect'
+              where
+                inspect'   = endpoint @"inspectNR" (\_ -> inspectOracleNoReturn)
 
 inspectEndpoint :: Promise () OracleSchema Text (Maybe OracleDatum)
 inspectEndpoint = endpoint @"inspect" $ \_ -> do inspectOracle

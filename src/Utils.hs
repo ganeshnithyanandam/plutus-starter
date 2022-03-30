@@ -94,7 +94,7 @@ contractActivationArgs :: WalletId -> a -> ContractActivationArgs a
 contractActivationArgs wid a = ContractActivationArgs
     { caID = a
     , caWallet = Just $ Wallet { getWalletId = wid
-                               , prettyWalletName = Just "PabRscContractWallet"
+                               --, prettyWalletName = Just "PabRscContractWallet"
                                }
     }
 

@@ -36,12 +36,14 @@ oracleTrace :: EmulatorTrace ()
 oracleTrace = do
     h1 <- activateContractWallet alice useOrclEndpoints
     h2 <- activateContractWallet alice walletEndpoint
+    h3 <- activateContractWallet alice inspectEndpointNR
     {-h2 <- activateContractWallet alice inspectEndpoint-}
     {-ownPK <- Contract.ownPaymentPubKeyHash-}
     let pkhBob = mockWalletPaymentPubKeyHash bob
     callEndpoint @"start" h1 pkhBob
     let pkhCharlie = mockWalletPaymentPubKeyHash charlie
     callEndpoint @"update" h1 pkhCharlie
-
+    void $ Emulator.waitNSlots 2
+    callEndpoint @"inspectNR" h3 ()
     void $ Emulator.waitNSlots 2
     callEndpoint @"payRewards" h2 ()
