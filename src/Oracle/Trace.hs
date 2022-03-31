@@ -41,6 +41,7 @@ oracleTrace = do
     {-ownPK <- Contract.ownPaymentPubKeyHash-}
     let pkhBob = mockWalletPaymentPubKeyHash bob
     callEndpoint @"start" h1 pkhBob
+    void $ Emulator.waitNSlots 2
     let pkhCharlie = mockWalletPaymentPubKeyHash charlie
     callEndpoint @"update" h1 pkhCharlie
     void $ Emulator.waitNSlots 2

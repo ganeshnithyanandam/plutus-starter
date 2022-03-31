@@ -203,5 +203,12 @@ Discord](https://discord.gg/sSF5gmDBYg).
 #### To use entr to watch your source file during development
 ```ls src/Oracle/*.hs | entr -r cabal build plutus-starter-pab --dependencies-only --disable-documentation```
 
+####Query wallet 
+
+http://localhost:8090/v2/wallets/$WID/utxo
+http://localhost:8090/v2/wallets/$WID/transactions
+http://localhost:8090/v2/wallets/$WID/utxo
+curl -H "content-type: application/json" \
+-XGET localhost:8090/v2/wallets/$WID/statistics/utxos | jq '.'
 
 Thanks!

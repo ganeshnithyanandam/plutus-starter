@@ -61,10 +61,7 @@ writeOracleValidator :: IO (Either (FileError ()) ())
 writeOracleValidator =
   let tn'   = (TokenName { unTokenName = "TADROrcl" })
       orcl  = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
-  in writeValidator "deploy/testnet/oracle.plutus" $ oracleValScript $ Oracle
-     { oSymbol = markerCurSymbol tn'
-     , tn = tn'
-     }
+  in writeValidator "deploy/testnet/oracle.plutus" $ oracleValScript orcl
 
 writeMarkerMintingPolicy :: IO (Either (FileError ()) ())
 writeMarkerMintingPolicy =

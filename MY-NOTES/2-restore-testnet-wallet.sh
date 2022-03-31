@@ -7,7 +7,7 @@ export TESTNODE_DIR=$PLUTUS/plutus-pab/test-node
 cd $TESTNODE_DIR
 
 curl -H "content-type: application/json" -XPOST \
-  -d @testnet/my-wallets/restore-wallet-adatar-testnet.json \
+  -d @testnet/my-wallets/rsc-wallet-seed.json \
   localhost:8090/v2/wallets
 
 

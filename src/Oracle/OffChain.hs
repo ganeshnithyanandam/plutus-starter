@@ -43,10 +43,10 @@ startOracle pkh = do
             o    <- fromJust <$> Contract.txOutFromRef oref
             Contract.logDebug @String $ printf "picked UTxO at %s with value %s" (show oref) (show $ _ciTxOutValue o)
 
-            let tn' = (TokenName { unTokenName = "ADROrcl" })
+            let tn' = (TokenName { unTokenName = "TADROrcl" })
                 orcl        = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
-                markerVal         = Value.singleton (markerCurSymbol "ADROrcl") "ADROrcl" 1
-                lookups     = Constraints.mintingPolicy (markerPolicy (TokenName { unTokenName = "ADROrcl" })) <>
+                markerVal         = Value.singleton (markerCurSymbol "TADROrcl") "TADROrcl" 1
+                lookups     = Constraints.mintingPolicy (markerPolicy (TokenName { unTokenName = "TADROrcl" })) <>
                               Constraints.unspentOutputs (Map.singleton oref o) <>
                               Constraints.otherScript (oracleValScript orcl)
                 constraints = Constraints.mustMintValue markerVal
@@ -58,9 +58,9 @@ startOracle pkh = do
 
 updateOracle :: PaymentPubKeyHash -> Contract w s Text ()
 updateOracle pkh = do
-            let tn' = (TokenName { unTokenName = "ADROrcl" })
+            let tn' = (TokenName { unTokenName = "TADROrcl" })
                 orcl        = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
-                markerVal   = Value.singleton (markerCurSymbol "ADROrcl") "ADROrcl" 1
+                markerVal   = Value.singleton (markerCurSymbol "TADROrcl") "TADROrcl" 1
                 dat         = oracleDatumWith Used pkh
                 lookups     = Constraints.typedValidatorLookups (oracleScriptInst orcl)
                 constraints = Constraints.mustPayToTheScript dat markerVal
@@ -100,7 +100,7 @@ adjustAndSubmitWith lookups constraints = do
 inspectOracle :: Contract w s Text (Maybe OracleDatum)
 inspectOracle = do
             Contract.logInfo @String $ printf "Inspecting oracle\n"
-            let tn' = (TokenName { unTokenName = "ADROrcl" })
+            let tn' = (TokenName { unTokenName = "TADROrcl" })
                 orcl = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
             os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)
             let val = mconcat [view ciTxOutValue o | o <- os]
@@ -115,7 +115,7 @@ inspectOracle = do
 inspectOracleNoReturn :: Contract w s Text ()
 inspectOracleNoReturn = do
             Contract.logInfo @String $ printf "Inspecting oracle\n"
-            let tn' = (TokenName { unTokenName = "ADROrcl" })
+            let tn' = (TokenName { unTokenName = "TADROrcl" })
                 orcl = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
             os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)
             let val = mconcat [view ciTxOutValue o | o <- os]
@@ -127,7 +127,7 @@ inspectOracleNoReturn = do
             Contract.logInfo @String $ printf "Datum at oracle %s\n" $ show markerDatum
 
 markerVal :: Value
-markerVal = Value.singleton (markerCurSymbol "ADROrcl") "ADROrcl" 1
+markerVal = Value.singleton (markerCurSymbol "TADROrcl") "TADROrcl" 1
 
 csMatcher :: CurrencySymbol -> Value -> Bool
 csMatcher cs val = cs `elem` symbols val
@@ -166,7 +166,7 @@ payRewards :: Contract w s Text ()
 payRewards = do
         dat <- inspectOracle
         Contract.logDebug @String $ printf "Received datum from oracle: %s" (show dat)
-        let tn' = (TokenName { unTokenName = "ADROrcl" })
+        let tn' = (TokenName { unTokenName = "TADROrcl" })
             orcl = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
             pkh' = pkh $ fromJust dat
         os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)

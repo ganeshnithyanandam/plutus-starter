@@ -1,8 +1,9 @@
-To run the generator 
-`cabal repl`
+##To run the generator
 
-`import Oracle.Deploy`
-`writeOracleValidator`
+cabal repl
+
+import Oracle.Deploy
+writeOracleValidator
 
 
 

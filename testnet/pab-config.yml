@@ -38,11 +38,6 @@ chainIndexConfig:
 requestProcessingConfig:
   requestProcessingInterval: 1
 
-signingProcessConfig:
-  spBaseUrl: http://localhost:9084
-  spWallet:
-    getWallet: 1
-
 metadataServerConfig:
   mdBaseUrl: http://localhost:9085
 
@@ -51,8 +46,8 @@ developmentOptions:
   pabResumeFrom:
     # { "tag": "PointAtGenesis" }
     { "tag" : "Point"
-    , "pointBlockId" : "7c03fad18d387e99ac49cf3da304b5bafc39b42c37af8109b682be2e86c138c5"
-    , "pointSlot" : { "getSlot" : 54243222 }
+    , "pointBlockId" : "d66c030bb8dd29fb52bf2fc9f8865f4970ba89a31330aaa0df18b7fef205a4ab"
+    , "pointSlot" : { "getSlot" : 54362342 }
     }
 # Optional EKG Server Config
 # ----

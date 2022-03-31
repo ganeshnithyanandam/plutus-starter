@@ -2,4 +2,4 @@
 
 cabal run -- oracle-pab \
   --config testnet/pab-config.yml webserver \
-  --passphrase pab123456789
+  --passphrase rsc123456789
