@@ -62,8 +62,14 @@ updateOracle pkh = do
                 orcl        = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
                 markerVal   = Value.singleton (markerCurSymbol "TADROrcl") "TADROrcl" 1
                 dat         = oracleDatumWith Used pkh
-                lookups     = Constraints.typedValidatorLookups (oracleScriptInst orcl)
+            scrUtxos  <- utxosAt (oracleAddress orcl)
+            let markerUtxo = Map.filter (\x -> csMatcher (markerCurSymbol tn') $ view ciTxOutValue x) scrUtxos
+            --let markerO = [uxo | uxo <- scrUtxos, csMatcher (markerCurSymbol tn') (view ciTxOutValue (map snd . Map.toList <$> scrUtxos))]
+            let lookups     = Constraints.typedValidatorLookups (oracleScriptInst orcl)
+                              <> Constraints.otherScript (oracleValScript orcl)
+                              <> Constraints.unspentOutputs (markerUtxo)
                 constraints = Constraints.mustPayToTheScript dat markerVal
+                              <>Constraints.mustSpendScriptOutput (fst (head $ Map.toList markerUtxo)) (Redeemer $ PlutusTx.toBuiltinData Update)
             void $ adjustAndSubmitWith @Oracling lookups constraints
             Contract.logInfo @String $ printf "Update oracle with data: %s" (show $ dat)
 
