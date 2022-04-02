@@ -17,7 +17,10 @@ import           Wallet.Emulator.Wallet              (knownWallet, mockWalletAdd
 
 import qualified Oracle.OffChain               as Oracle
 
-data OracleContracts = OracleStart Ledger.PaymentPubKeyHash | OracleUpdate Ledger.PaymentPubKeyHash | OracleInspect
+data OracleContracts = OracleStart Ledger.PaymentPubKeyHash
+                     | OracleUpdate Ledger.PaymentPubKeyHash
+                     | OracleInspect
+                     | SendRewards
     deriving (Eq, Ord, Show, Generic, FromJSON, ToJSON, ToSchema)
 
 instance Pretty OracleContracts where
@@ -25,11 +28,12 @@ instance Pretty OracleContracts where
 
 instance HasDefinitions OracleContracts where
 
-    getDefinitions        = [OracleStart examplePkh, OracleUpdate examplePkh, OracleInspect]
+    getDefinitions        = [OracleStart examplePkh, OracleUpdate examplePkh, OracleInspect, SendRewards]
 
     getContract (OracleStart pkh)      = SomeBuiltin $ Oracle.startOracle @() @Empty pkh
     getContract (OracleUpdate pkh)      = SomeBuiltin $ Oracle.updateOracle @() @Empty pkh
     getContract (OracleInspect)      = SomeBuiltin $ Oracle.inspectOracle @() @Empty
+    getContract (SendRewards)      = SomeBuiltin $ Oracle.payRewards @() @Empty
 
     getSchema = const $ endpointsToSchemas @Empty
 
