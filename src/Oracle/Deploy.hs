@@ -26,6 +26,7 @@ import           Ledger.Value                as Value
 
 import           Oracle.OnChain
 import           Oracle.OffChain
+import           ContractProperties
 
 dataToScriptData :: Data -> ScriptData
 dataToScriptData (Constr n xs) = ScriptDataConstructor n $ dataToScriptData <$> xs
@@ -59,13 +60,13 @@ writeUpdateRedeemer = writeJSON "deploy/testnet/rdr-update-oracle.json" Update
 
 writeOracleValidator :: IO (Either (FileError ()) ())
 writeOracleValidator =
-  let tn'   = (TokenName { unTokenName = "TADROrcl" })
-      orcl  = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
+  let tn'   = contractTokenName
+      orcl  = contractOracle
   in writeValidator "deploy/testnet/oracle.plutus" $ oracleValScript orcl
 
 writeMarkerMintingPolicy :: IO (Either (FileError ()) ())
 writeMarkerMintingPolicy =
-  let tName   = (TokenName { unTokenName = "TADROrcl" })
+  let tName   = contractTokenName
   in writeFileTextEnvelope @(PlutusScript PlutusScriptV1)
                             "deploy/testnet/mintmarker.plutus"
                             Nothing . PlutusScriptSerialised . SBS.toShort . LBS.toStrict . serialise . Ledger.getMintingPolicy $ markerPolicy tName
