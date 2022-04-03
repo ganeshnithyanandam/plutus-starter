@@ -56,6 +56,8 @@ oracleTrace = do
     void $ Emulator.waitNSlots 2
     callEndpoint @"payToTheScript" h2 (67*1000000)
     void $ Emulator.waitNSlots 2
+    callEndpoint @"payRewards" h2 () -- this will not transfer because oracle is in used state
+    void $ Emulator.waitNSlots 2
     let pkhDelta = mockWalletPaymentPubKeyHash delta
     callEndpoint @"update" h1 pkhDelta
     void $ Emulator.waitNSlots 2
