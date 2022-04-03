@@ -81,8 +81,8 @@ data OracleStatus = Used | Unused
   deriving (Show, Eq)
 
 data OracleDatum = OracleDatumMarker  { status ::  OracleStatus
-                                , pkh :: PaymentPubKeyHash
-                                }
+                                      , pkh :: PaymentPubKeyHash
+                                      }
                    | OracleDatumNone
   deriving (Show, Eq)
 

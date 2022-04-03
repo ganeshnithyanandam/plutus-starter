@@ -65,7 +65,7 @@ updateOracle pkh = do
             let tn' = contractTokenName
                 orcl        = contractOracle
                 markerValue   = Value.singleton (markerCurSymbol "TADROrcl") "TADROrcl" 1
-                dat         = oracleDatumWith Used pkh
+                dat         = oracleDatumWith Unused pkh
             scrUtxos  <- utxosAt (oracleAddress orcl)
             let markerUtxo = Map.filter (\x -> csMatcher (markerCurSymbol tn') $ view ciTxOutValue x) scrUtxos
             --let markerO = [uxo | uxo <- scrUtxos, csMatcher (markerCurSymbol tn') (view ciTxOutValue (map snd . Map.toList <$> scrUtxos))]
@@ -175,19 +175,23 @@ payRewards = do
         dat <- inspectOracle
         ownPkh <- Request.ownPaymentPubKeyHash
         Contract.logDebug @String $ printf "Received datum from oracle: %s" (show dat)
-        let tn' = (TokenName { unTokenName = "TADROrcl" })
-            orcl = Oracle {oSymbol = markerCurSymbol tn', tn = tn'}
+        let tn' = contractTokenName
+            orcl = contractOracle
             pkh' = pkh $ fromJust dat
-        os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)
-        utxos <- utxosAt (oracleAddress orcl)
-        let val = mconcat [view ciTxOutValue o | o <- os, csMatcher (markerCurSymbol tn') (view ciTxOutValue o) == False]
-            lookups = Constraints.typedValidatorLookups (oracleScriptInst orcl)
-                      <> Constraints.unspentOutputs utxos
-            constraints = collectFromScript utxos (Use)
-                          <> Constraints.mustPayToPubKey pkh' val
-                          <> Constraints.mustPayToTheScript (oracleDatumWith Used pkh') markerValue
-        void $ adjustAndSubmitWith @Oracling lookups constraints
-        Contract.logInfo @String $ printf "Rewards paid with data: %s" (show $ dat)
+            status' = status $ fromJust dat
+        case status' of
+          Used -> Contract.throwError $ pack $ printf "The oracle state is 'Used' for pkh: %s" $ show pkh'
+          Unused -> do
+            os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)
+            utxos <- utxosAt (oracleAddress orcl)
+            let val = mconcat [view ciTxOutValue o | o <- os, csMatcher (markerCurSymbol tn') (view ciTxOutValue o) == False]
+                lookups = Constraints.typedValidatorLookups (oracleScriptInst orcl)
+                          <> Constraints.unspentOutputs utxos
+                constraints = collectFromScript utxos (Use)
+                              <> Constraints.mustPayToPubKey pkh' val
+                              <> Constraints.mustPayToTheScript (oracleDatumWith Used pkh') markerValue
+            void $ adjustAndSubmitWith @Oracling lookups constraints
+            Contract.logInfo @String $ printf "Rewards paid with data: %s" (show $ dat)
 
 payToTheScript :: Integer -> Contract w s Text ()
 payToTheScript llaces = do
