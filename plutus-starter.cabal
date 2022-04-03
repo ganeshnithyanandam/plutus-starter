@@ -46,7 +46,8 @@ library
       Oracle.Trace,
       Oracle.Deploy,
       PAB,
-      Utils
+      Utils,
+      ContractProperties
     build-depends:
       base >= 4.9 && < 5,
       aeson,
@@ -74,8 +75,7 @@ library
       prettyprinter,
     hs-source-dirs:
       src,
-      src/Oracle,
-      src/RSC
+      src/Oracle
 
 executable oracle-pab
   main-is: oracle-pab.hs

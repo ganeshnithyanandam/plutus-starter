@@ -31,6 +31,7 @@ alice, bob, charlie :: Wallet
 alice = X.knownWallet 1
 bob = X.knownWallet 2
 charlie = X.knownWallet 3
+delta = X.knownWallet 4
 
 oracleTrace :: EmulatorTrace ()
 oracleTrace = do
@@ -46,5 +47,14 @@ oracleTrace = do
     callEndpoint @"update" h1 pkhCharlie
     void $ Emulator.waitNSlots 2
     callEndpoint @"inspectNR" h3 ()
+    void $ Emulator.waitNSlots 2
+    callEndpoint @"payRewards" h2 ()
+    void $ Emulator.waitNSlots 2
+    callEndpoint @"payToTheScript" h2 (67*1000000)
+    void $ Emulator.waitNSlots 2
+    let pkhDelta = mockWalletPaymentPubKeyHash delta
+    callEndpoint @"update" h1 pkhDelta
+    void $ Emulator.waitNSlots 2
+    callEndpoint @"payToTheScript" h2 (10*1000000)
     void $ Emulator.waitNSlots 2
     callEndpoint @"payRewards" h2 ()

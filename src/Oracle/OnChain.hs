@@ -80,25 +80,24 @@ PlutusTx.makeLift ''Oracle
 data OracleStatus = Used | Unused
   deriving (Show, Eq)
 
-data OracleDatum = OracleDatum  { status ::  OracleStatus
+data OracleDatum = OracleDatumMarker  { status ::  OracleStatus
                                 , pkh :: PaymentPubKeyHash
                                 }
+                   | OracleDatumNone
   deriving (Show, Eq)
 
 data OracleRedeemer = Use | Update
   deriving (Show, Eq, Generic)
 
 PlutusTx.makeIsDataIndexed ''OracleStatus [('Used,0), ('Unused,1)]
-PlutusTx.makeIsDataIndexed ''OracleDatum [('OracleDatum,0)]
+PlutusTx.makeIsDataIndexed ''OracleDatum [('OracleDatumMarker,0),('OracleDatumNone,1)]
 PlutusTx.makeIsDataIndexed ''OracleRedeemer [('Use,0), ('Update,1)]
 
 {-# INLINABLE mkOracleValidator #-}
 mkOracleValidator :: Oracle -> OracleDatum -> OracleRedeemer -> ScriptContext -> Bool
 mkOracleValidator orcl dat r ctx =
-    traceIfFalse "Marker token missing from input"  inputHasToken  &&
-    traceIfFalse "Marker token missing from output" outputHasMarker &&
     case r of
-        Update -> True
+        Update -> traceIfFalse "Marker token missing from input"  inputHasToken
         Use    -> True
   where
     info :: TxInfo
