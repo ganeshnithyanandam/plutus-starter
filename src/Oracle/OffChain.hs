@@ -184,8 +184,7 @@ payRewards = do
             lookups = Constraints.typedValidatorLookups (oracleScriptInst orcl)
                       <> Constraints.unspentOutputs utxos
             constraints = collectFromScript utxos (Use)
-                          <> Constraints.mustPayToPubKey (pkh') val
-                          <> Constraints.mustPayToPubKey ownPkh (toValue Ledger.minAdaTxOut)
+                          <> Constraints.mustPayToPubKey pkh' val
                           <> Constraints.mustPayToTheScript (oracleDatumWith Used pkh') markerValue
         void $ adjustAndSubmitWith @Oracling lookups constraints
         Contract.logInfo @String $ printf "Rewards paid with data: %s" (show $ dat)
