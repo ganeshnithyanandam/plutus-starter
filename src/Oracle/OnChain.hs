@@ -73,6 +73,7 @@ markerAsset tn = AssetClass (markerCurSymbol tn, tn)
 data Oracle = Oracle
       { oSymbol :: !CurrencySymbol
       , tn :: !TokenName
+      , wPkh :: !PaymentPubKeyHash
       } deriving (Show, Generic, FromJSON, ToJSON, Prelude.Eq, Prelude.Ord)
 
 PlutusTx.makeLift ''Oracle

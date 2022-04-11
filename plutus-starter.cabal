@@ -176,3 +176,14 @@ executable send-rewards
                      , plutus-pab
                      , plutus-starter
                      , req ^>= 3.9.0
+
+executable pay-to-script
+  main-is: pay-to-script.hs
+  hs-source-dirs:      app
+  ghc-options:         -Wall
+  build-depends:       base ^>= 4.14.1.0
+                     , plutus-contract
+                     , plutus-ledger
+                     , plutus-pab
+                     , plutus-starter
+                     , req ^>= 3.9.0

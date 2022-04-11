@@ -27,6 +27,7 @@ import           Ledger.Value                as Value
 import           Oracle.OnChain
 import           Oracle.OffChain
 import           ContractProperties
+import           Utils                  (unsafePaymentPubKeyHash, unsafeReadAddress)
 
 dataToScriptData :: Data -> ScriptData
 dataToScriptData (Constr n xs) = ScriptDataConstructor n $ dataToScriptData <$> xs
@@ -58,10 +59,14 @@ writeUseRedeemer = writeJSON "deploy/testnet/rdr-use-oracle.json" Use
 writeUpdateRedeemer :: IO ()
 writeUpdateRedeemer = writeJSON "deploy/testnet/rdr-update-oracle.json" Update
 
-writeOracleValidator :: IO (Either (FileError ()) ())
-writeOracleValidator =
+writeOracleValidator :: String -> IO (Either (FileError ()) ())
+writeOracleValidator addr =
+   writeOracleValidator' $ unsafePaymentPubKeyHash $ unsafeReadAddress addr
+
+writeOracleValidator' :: Ledger.PaymentPubKeyHash -> IO (Either (FileError ()) ())
+writeOracleValidator' wPkh =
   let tn'   = contractTokenName
-      orcl  = contractOracle
+      orcl  = contractOracle wPkh
   in writeValidator "deploy/testnet/oracle.plutus" $ oracleValScript orcl
 
 writeMarkerMintingPolicy :: IO (Either (FileError ()) ())

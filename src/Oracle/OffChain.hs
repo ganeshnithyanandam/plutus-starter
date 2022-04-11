@@ -42,13 +42,14 @@ import           ContractProperties
 
 startOracle :: PaymentPubKeyHash -> Contract w s Text ()
 startOracle pkh = do
+            ownPkh <- Request.ownPaymentPubKeyHash
             oref <- getUnspentOutput
             Contract.logInfo @String $ printf "picked UTxO %s" (show oref)
             o    <- fromJust <$> Contract.txOutFromRef oref
             Contract.logDebug @String $ printf "picked UTxO at %s with value %s" (show oref) (show $ _ciTxOutValue o)
 
             let tn' = contractTokenName
-                orcl        = contractOracle
+                orcl        = contractOracle ownPkh
                 markerValue   = Value.singleton (markerCurSymbol "TADROrcl") "TADROrcl" 1
                 lookups     = Constraints.mintingPolicy (markerPolicy contractTokenName) <>
                               Constraints.unspentOutputs (Map.singleton oref o) <>
@@ -62,20 +63,21 @@ startOracle pkh = do
 
 updateOracle :: PaymentPubKeyHash -> Contract w s Text ()
 updateOracle pkh = do
-            let tn' = contractTokenName
-                orcl        = contractOracle
-                markerValue   = Value.singleton (markerCurSymbol "TADROrcl") "TADROrcl" 1
-                dat         = oracleDatumWith Unused pkh
-            scrUtxos  <- utxosAt (oracleAddress orcl)
-            let markerUtxo = Map.filter (\x -> csMatcher (markerCurSymbol tn') $ view ciTxOutValue x) scrUtxos
-            --let markerO = [uxo | uxo <- scrUtxos, csMatcher (markerCurSymbol tn') (view ciTxOutValue (map snd . Map.toList <$> scrUtxos))]
-            let lookups     = Constraints.typedValidatorLookups (oracleScriptInst orcl)
-                              <> Constraints.otherScript (oracleValScript orcl)
-                              <> Constraints.unspentOutputs (markerUtxo)
-                constraints = Constraints.mustPayToTheScript dat markerValue
-                              <> Constraints.mustSpendScriptOutput (fst (head $ Map.toList markerUtxo)) (Redeemer $ PlutusTx.toBuiltinData Update)
-            void $ adjustAndSubmitWith @Oracling lookups constraints
-            Contract.logInfo @String $ printf "Update oracle with data: %s" (show $ dat)
+          ownPkh <- Request.ownPaymentPubKeyHash
+          let tn' = contractTokenName
+              orcl        = contractOracle ownPkh
+              markerValue   = Value.singleton (markerCurSymbol "TADROrcl") "TADROrcl" 1
+              dat         = oracleDatumWith Unused pkh
+          scrUtxos  <- utxosAt (oracleAddress orcl)
+          let markerUtxo = Map.filter (\x -> csMatcher (markerCurSymbol tn') $ view ciTxOutValue x) scrUtxos
+          --let markerO = [uxo | uxo <- scrUtxos, csMatcher (markerCurSymbol tn') (view ciTxOutValue (map snd . Map.toList <$> scrUtxos))]
+          let lookups     = Constraints.typedValidatorLookups (oracleScriptInst orcl)
+                            <> Constraints.otherScript (oracleValScript orcl)
+                            <> Constraints.unspentOutputs (markerUtxo)
+              constraints = Constraints.mustPayToTheScript dat markerValue
+                            <> Constraints.mustSpendScriptOutput (fst (head $ Map.toList markerUtxo)) (Redeemer $ PlutusTx.toBuiltinData Update)
+          void $ adjustAndSubmitWith @Oracling lookups constraints
+          Contract.logInfo @String $ printf "Update oracle with data: %s" (show $ dat)
 
 oracleDatumWith :: OracleStatus -> PaymentPubKeyHash -> OracleDatum
 oracleDatumWith s' pkh' = OracleDatumMarker {status = s', pkh = pkh'}
@@ -109,9 +111,10 @@ adjustAndSubmitWith lookups constraints = do
 
 inspectOracle :: Contract w s Text (Maybe OracleDatum)
 inspectOracle = do
+            ownPkh <- Request.ownPaymentPubKeyHash
             Contract.logInfo @String $ printf "Inspecting oracle\n"
             let tn' = contractTokenName
-                orcl = contractOracle
+                orcl = contractOracle ownPkh
             os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)
             let val = mconcat [view ciTxOutValue o | o <- os]
                 markerOs = [o | o <- os, csMatcher (markerCurSymbol tn') (view ciTxOutValue o)]
@@ -124,9 +127,10 @@ inspectOracle = do
 
 inspectOracleNoReturn :: Contract w s Text ()
 inspectOracleNoReturn = do
+            ownPkh <- Request.ownPaymentPubKeyHash
             Contract.logInfo @String $ printf "Inspecting oracle\n"
             let tn' = contractTokenName
-                orcl = contractOracle
+                orcl = contractOracle ownPkh
             os  <- map snd . Map.toList <$> utxosAt (oracleAddress orcl)
             let val = mconcat [view ciTxOutValue o | o <- os]
                 markerOs = [o | o <- os, csMatcher (markerCurSymbol tn') (view ciTxOutValue o)]
@@ -176,7 +180,7 @@ payRewards = do
         ownPkh <- Request.ownPaymentPubKeyHash
         Contract.logDebug @String $ printf "Received datum from oracle: %s" (show dat)
         let tn' = contractTokenName
-            orcl = contractOracle
+            orcl = contractOracle ownPkh
             pkh' = pkh $ fromJust dat
             status' = status $ fromJust dat
         case status' of
@@ -196,7 +200,8 @@ payRewards = do
 payToTheScript :: Integer -> Contract w s Text ()
 payToTheScript llaces = do
         Contract.logDebug @String $ printf "Paying to script - lovelaces : %s" (show llaces)
-        let orcl = contractOracle
+        ownPkh <- Request.ownPaymentPubKeyHash
+        let orcl = contractOracle ownPkh
             lookups = Constraints.typedValidatorLookups (oracleScriptInst orcl)
             constraints = Constraints.mustPayToTheScript OracleDatumNone $ lovelaceValueOf llaces
         void $ adjustAndSubmitWith @Oracling lookups constraints

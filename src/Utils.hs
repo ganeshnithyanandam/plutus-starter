@@ -4,6 +4,7 @@
 module Utils
     ( tryReadAddress, unsafeReadAddress
     , tryReadWalletId, unsafeReadWalletId
+    , unsafeReadInteger
     , unsafeReadTxOutRef
     , writeJSON, writeUnit
     , contractActivationArgs
@@ -73,6 +74,9 @@ unsafeReadWalletId s = fromMaybe (error $ "can't parse " ++ s ++ " as a WalletId
 
 unsafeReadAddress :: String -> Plutus.Address
 unsafeReadAddress s = fromMaybe (error $ "can't parse " ++ s ++ " as an address") $ tryReadAddress s
+
+unsafeReadInteger :: String -> Integer
+unsafeReadInteger s = fromMaybe (error $ "can't parse " ++ s ++ " as Integer") $ read s :: Integer
 
 unsafeReadTxOutRef :: String -> Plutus.TxOutRef
 unsafeReadTxOutRef s =
