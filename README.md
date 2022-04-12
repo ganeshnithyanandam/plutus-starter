@@ -1,6 +1,8 @@
 # Plutus Platform starter project
 ![CI](https://github.com/input-output-hk/plutus-starter/actions/workflows/test.yml/badge.svg?branch=main)
 
+## The commit hash used for plutus-apps is 6e3f6a59d64f6d4cd9d38bf263972adaf4f7b244.
+
 
 This project gives a simple starter project for using the Plutus Platform.
 
